@@ -1,0 +1,176 @@
+{
+  "name": "My workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        -144,
+        16
+      ],
+      "id": "eb2b196e-56a1-4372-bc92-2077a0cd3f18",
+      "name": "When chat message received",
+      "webhookId": "7ec3ffc2-e3fb-43ab-b07f-e9e23cb81fa7"
+    },
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "You are an autonomous AI SOC Analyst. Your goal is to triage security alerts. You have access to threat intelligence tools. Analyze URLs using the provided sub-workflow and make a verdict of 'Malicious' or 'Benign'. Always provide a summary report"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        64,
+        16
+      ],
+      "id": "7afc168e-8864-45ae-bacb-b75f0a3bc8b5",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatMistralCloud",
+      "typeVersion": 1,
+      "position": [
+        -32,
+        208
+      ],
+      "id": "5dacc2fd-7c8a-41db-9808-3f986437060e",
+      "name": "Mistral Cloud Chat Model",
+      "credentials": {
+        "mistralCloudApi": {
+          "id": "Hw3WhM4PuKC1Nxzj",
+          "name": "Mistral Cloud account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "endpointUrl": "http://192.168.100.46:8080/sse",
+        "serverTransport": "sse",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.mcpClientTool",
+      "typeVersion": 1.3,
+      "position": [
+        288,
+        224
+      ],
+      "id": "df36d40f-b1e3-451d-b6d1-7921fbf5bb99",
+      "name": "Wazuh SIEM MCP Client"
+    },
+    {
+      "parameters": {
+        "sendTo": "thisismysoclab@gmail.com",
+        "subject": "=Ai Soc Analyst Report ",
+        "message": "=<!DOCTYPE html>\n<html>\n<head>\n  <meta charset=\"utf-8\">\n  <title>Security Alert Triage Report</title>\n</head>\n<body style=\"background-color: #f4f6f8; margin: 0; padding: 30px; font-family: 'Segoe UI', Arial, sans-serif;\">\n\n  <!-- Main Containment Card -->\n  <table align=\"center\" border=\"0\" cellpadding=\"0\" cellspacing=\"0\" width=\"100%\" style=\"max-width: 680px; background-color: #ffffff; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); overflow: hidden; border-collapse: collapse;\">\n    \n    <!-- Professional Header Branding Banner -->\n    <tr>\n      <td style=\"background-color: #1a3a5f; padding: 25px 40px; text-align: left;\">\n        <h1 style=\"color: #ffffff; margin: 0; font-size: 22px; font-weight: 600; letter-spacing: 0.5px;\">\n          AI SOC Analyst Operational Dispatch\n        </h1>\n        <p style=\"color: #cbd5e1; margin: 5px 0 0 0; font-size: 13px;\">Automated Security Telemetry Triage Report</p>\n      </td>\n    </tr>\n\n    <!-- Body Output Injection Wrapper -->\n    <tr>\n      <td style=\"padding: 40px; color: #334155; font-size: 15px; line-height: 1.6;\">\n        \n        <!-- Inject the output data directly from your preceding Code Node here -->\n        {{ $json.htmlReport }}\n        \n      </td>\n    </tr>\n\n    <!-- Clean Corporate Footer -->\n    <tr>\n      <td style=\"background-color: #f8fafc; padding: 20px 40px; text-align: center; font-size: 12px; color: #94a3b8; border-top: 1px solid #e2e8f0;\">\n        This is an automated mitigation warning summary compiled by your internal n8n AI Agent ecosystem.<br>\n        <strong>Classification: Internal Only Security Infrastructure Records</strong>\n      </td>\n    </tr>\n  </table>\n\n</body>\n</html>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        480,
+        192
+      ],
+      "id": "63073b9a-ed09-4ea9-955c-e3116d4fa159",
+      "name": "Send a message",
+      "webhookId": "6ebbefc6-5004-4487-8640-789aefc7d58a",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "8BTCzjC2h3SVvF4u",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// Get the raw output text from your AI agent\nconst markdownText = items[0].json.output || items[0].json.response || \"\";\n\n// 1. Regex to extract metadata fields out of the text for the subject line\nconst sevMatch = markdownText.match(/Severity Level:\\s*`?([0-9]+)`?/i);\nconst agentMatch = markdownText.match(/Agent:\\s*`?([a-zA-Z0-9_-]+)`?/i);\nconst ruleMatch = markdownText.match(/Rule ID:\\s*`?([0-9]+)`?/i);\n\nconst extractedSev = sevMatch ? sevMatch[1] : \"Alert\";\nconst extractedAgent = agentMatch ? agentMatch[1] : \"Endpoint\";\nconst extractedRule = ruleMatch ? \"Rule \" + ruleMatch[1] : \"Security Event\";\n\n// 2. Standard Markdown-to-HTML Conversion\nfunction markdownToHtml(md) {\n  return md\n    .replace(/#### (.*)/g, '<h4 style=\"color: #2c3e50; font-family: Arial, sans-serif; margin-top: 20px; border-bottom: 1px solid #ecf0f1; padding-bottom: 5px;\">$1</h4>')\n    .replace(/### (.*)/g, '<h3 style=\"color: #1a3a5f; font-family: Arial, sans-serif; margin-top: 25px; border-bottom: 2px solid #1a3a5f; padding-bottom: 5px;\">$1</h3>')\n    .replace(/\\*\\*([^*]+)\\*\\*/g, '<strong style=\"color: #2c3e50;\">$1</strong>')\n    .replace(/`([^`]+)`/g, '<code style=\"background-color: #f8f9fa; padding: 2px 6px; border-radius: 4px; border: 1px solid #e9ecef; font-family: monospace; color: #e83e8c;\">$1</code>')\n    .replace(/- (.*)/g, '<li style=\"font-family: Arial, sans-serif; color: #4a5568; line-height: 1.6; margin-bottom: 5px;\">$1</li>')\n    .replace(/^\\s*-\\s(.*)/gm, '<li style=\"font-family: Arial, sans-serif; color: #4a5568; margin-left: 20px;\">$1</li>')\n    .replace(/>\\s(.*)/g, '<blockquote style=\"background: #f7fafc; border-left: 4px solid #3182ce; padding: 10px 15px; margin: 15px 0; font-style: italic; color: #4a5568;\">$1</blockquote>')\n    .replace(/```bash([\\s\\S]*?)```/g, '<pre style=\"background: #2d3748; color: #fff; padding: 15px; border-radius: 6px; overflow-x: auto; font-family: monospace; line-height: 1.4;\">$1</pre>')\n    .replace(/\\n/g, '<br>');\n}\n\n// 3. Output everything cleanly to the Gmail node\nreturn [{\n  json: {\n    htmlReport: markdownToHtml(markdownText),\n    severity: extractedSev,\n    agent: extractedAgent,\n    ruleInfo: extractedRule\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        416,
+        16
+      ],
+      "id": "360c6855-caaa-44ba-be3e-f6e696362b55",
+      "name": "Code in JavaScript"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mistral Cloud Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wazuh SIEM MCP Client": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "aa503865-00bc-4f57-8c92-cf418b3141a3",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "4f4572fc37110865554337aa20479610181231cdd6c9626534461a2e5abee72e"
+  },
+  "nodeGroups": [],
+  "id": "Ru0j2Kh49233WodT",
+  "tags": []
+}
